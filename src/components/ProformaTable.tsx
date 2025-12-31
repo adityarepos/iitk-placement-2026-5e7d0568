@@ -1,27 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { Grid } from "gridjs";
+import { useNavigate } from "react-router-dom";
+import { Grid, html } from "gridjs";
 import "gridjs/dist/theme/mermaid.css";
 import type { CompanyProforma } from "@/types/placement";
-
-function stripHtml(htmlString: string): string {
-  if (!htmlString) return "";
-  const div = document.createElement("div");
-  div.innerHTML = htmlString;
-  return div.textContent || div.innerText || "";
-}
-
-function formatCTC(ctc: string): string {
-  if (!ctc) return "-";
-  const stripped = stripHtml(ctc);
-  // Truncate if too long
-  return stripped.length > 50 ? stripped.substring(0, 47) + "..." : stripped;
-}
 
 export default function ProformaTable() {
   const containerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<Grid | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadData = async () => {
@@ -35,17 +23,13 @@ export default function ProformaTable() {
           company.company_name || "-",
           company.role || "-",
           company.profile || "-",
-          company.tentative_job_location || "-",
-          formatCTC(company.ctc_inr || company.cost_to_company),
-          company.bond_details || "-"
+          company.ID // For the view details button
         ]);
 
         setLoading(false);
 
-        // Need a small delay for the DOM to update
         setTimeout(() => {
           if (containerRef.current) {
-            // Clear previous grid if exists
             if (gridRef.current) {
               gridRef.current.destroy();
             }
@@ -55,11 +39,13 @@ export default function ProformaTable() {
               columns: [
                 { name: "ID", width: "80px" },
                 { name: "Company Name", width: "200px" },
-                { name: "Role", width: "150px" },
+                { name: "Role Name", width: "180px" },
                 { name: "Profile", width: "200px" },
-                { name: "Location", width: "180px" },
-                { name: "CTC", width: "180px" },
-                { name: "Bond", width: "100px" }
+                { 
+                  name: "View Details", 
+                  width: "120px",
+                  formatter: (cell) => html(`<button class="view-details-btn" data-id="${cell}">View Details</button>`)
+                }
               ],
               data: tableData,
               search: true,
@@ -87,6 +73,17 @@ export default function ProformaTable() {
             });
 
             gridRef.current.render(containerRef.current);
+
+            // Add click handler for view details buttons
+            containerRef.current.addEventListener("click", (e) => {
+              const target = e.target as HTMLElement;
+              if (target.classList.contains("view-details-btn")) {
+                const id = target.getAttribute("data-id");
+                if (id) {
+                  navigate(`/details/${id}`);
+                }
+              }
+            });
           }
         }, 100);
         
@@ -104,7 +101,7 @@ export default function ProformaTable() {
         gridRef.current.destroy();
       }
     };
-  }, []);
+  }, [navigate]);
 
   if (loading) {
     return (
