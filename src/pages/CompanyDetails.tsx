@@ -1,21 +1,60 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check, X, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import type { CompanyProforma } from "@/types/placement";
-
-function stripHtml(htmlString: string): string {
-  if (!htmlString) return "";
-  const div = document.createElement("div");
-  div.innerHTML = htmlString;
-  return div.textContent || div.innerText || "";
-}
+import { idToBranch } from "@/lib/branchMapping";
 
 function RenderHtml({ html }: { html: string }) {
   if (!html || html === "<p><br></p>") return <span className="text-muted-foreground">-</span>;
   return <div dangerouslySetInnerHTML={{ __html: html }} className="prose prose-sm max-w-none dark:prose-invert" />;
+}
+
+// Define programs and departments for the eligibility matrix
+const PROGRAMS = ["BT", "BS", "DoubleMajor", "DualA", "DualB", "DualC", "MT", "MS", "MSR", "MSc", "MDes", "MBA", "PhD"];
+const DEPARTMENTS = [
+  "AE", "BSBE", "CE", "CHE", "CSE", "EE", "MSE", "ME", "CHM", "ECO", "ES", "MTH",
+  "SDS", "PHY", "CGS", "DES", "MS", "MSP", "NET", "PSE", "Stats", "HSS",
+  "Mathematics", "SEE", "SSA"
+];
+
+// Build a lookup map from idToBranch
+function buildEligibilityMap(eligibilityStr: string): Map<string, boolean | null> {
+  const map = new Map<string, boolean | null>();
+  
+  // Get all branch IDs sorted
+  const sortedIds = Object.keys(idToBranch)
+    .map(Number)
+    .filter(id => id !== 200)
+    .sort((a, b) => a - b);
+  
+  sortedIds.forEach((id, index) => {
+    const branch = idToBranch[id];
+    if (branch && index < eligibilityStr.length) {
+      const char = eligibilityStr[index];
+      map.set(branch, char === "1" ? true : char === "0" ? false : null);
+    }
+  });
+  
+  return map;
+}
+
+function getEligibility(eligibilityMap: Map<string, boolean | null>, program: string, dept: string): boolean | null {
+  const key = `${program}-${dept}`;
+  if (eligibilityMap.has(key)) {
+    return eligibilityMap.get(key)!;
+  }
+  return null; // NA
+}
+
+function EligibilityIcon({ eligible }: { eligible: boolean | null }) {
+  if (eligible === true) {
+    return <Check className="h-4 w-4 text-green-500" />;
+  } else if (eligible === false) {
+    return <X className="h-4 w-4 text-red-500" />;
+  }
+  return <Minus className="h-4 w-4 text-muted-foreground" />;
 }
 
 export default function CompanyDetails() {
@@ -71,9 +110,9 @@ export default function CompanyDetails() {
   const DetailRow = ({ label, value }: { label: string; value: string | undefined }) => {
     if (!value || value.trim() === "") return null;
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 py-3">
-        <dt className="font-medium text-muted-foreground">{label}</dt>
-        <dd className="md:col-span-2 text-foreground">{value}</dd>
+      <div className="py-2">
+        <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
+        <dd className="mt-1 text-foreground">{value}</dd>
       </div>
     );
   };
@@ -81,18 +120,20 @@ export default function CompanyDetails() {
   const HtmlDetailRow = ({ label, value }: { label: string; value: string | undefined }) => {
     if (!value || value.trim() === "" || value === "<p><br></p>") return null;
     return (
-      <div className="py-4">
-        <dt className="font-medium text-muted-foreground mb-2">{label}</dt>
-        <dd className="text-foreground bg-muted/50 rounded-lg p-4">
+      <div className="py-3">
+        <dt className="text-sm font-medium text-muted-foreground mb-2">{label}</dt>
+        <dd className="text-foreground bg-muted/50 rounded-lg p-3">
           <RenderHtml html={value} />
         </dd>
       </div>
     );
   };
 
+  const eligibilityMap = buildEligibilityMap(company.eligibility || "");
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Back Button */}
         <Button variant="ghost" onClick={() => navigate("/")} className="mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -116,28 +157,28 @@ export default function CompanyDetails() {
           </CardHeader>
         </Card>
 
-        {/* Basic Info */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Basic Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="divide-y divide-border">
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Left Column - Basic Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Basic Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1">
               <DetailRow label="Role" value={company.role} />
               <DetailRow label="Profile" value={company.profile} />
               <DetailRow label="Location" value={company.tentative_job_location} />
               <DetailRow label="Bond Details" value={company.bond_details} />
-            </dl>
-          </CardContent>
-        </Card>
+              <DetailRow label="Required Skills" value={company.skill_set} />
+            </CardContent>
+          </Card>
 
-        {/* Compensation */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Compensation</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="divide-y divide-border">
+          {/* Right Column - Compensation */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Compensation</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1">
               <DetailRow label="CTC (INR)" value={company.ctc_inr} />
               <DetailRow label="Gross" value={company.gross} />
               <DetailRow label="Take Home" value={company.take_home} />
@@ -148,25 +189,36 @@ export default function CompanyDetails() {
               <DetailRow label="First Year CTC" value={company.first_ctc} />
               <DetailRow label="Deductions" value={company.deductions} />
               <DetailRow label="Perks" value={company.perks} />
-            </dl>
-            <HtmlDetailRow label="Package Details" value={company.package_details} />
-            <HtmlDetailRow label="Cost to Company Details" value={company.cost_to_company} />
-          </CardContent>
-        </Card>
-
-        {/* Skills */}
-        {company.skill_set && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Required Skills</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-line text-foreground">{company.skill_set}</p>
             </CardContent>
           </Card>
-        )}
+        </div>
 
-        {/* Job Description */}
+        {/* Full Width - Package & CTC Details */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {company.package_details && company.package_details !== "<p><br></p>" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Package Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RenderHtml html={company.package_details} />
+              </CardContent>
+            </Card>
+          )}
+          
+          {company.cost_to_company && company.cost_to_company !== "<p><br></p>" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Cost to Company Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RenderHtml html={company.cost_to_company} />
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Job Description - Full Width */}
         {company.job_description && company.job_description !== "<p><br></p>" && (
           <Card className="mb-6">
             <CardHeader>
@@ -177,6 +229,50 @@ export default function CompanyDetails() {
             </CardContent>
           </Card>
         )}
+
+        {/* Eligibility Matrix - Full Width */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg">Eligibility</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="text-left font-medium text-muted-foreground p-2 border-b border-border sticky left-0 bg-card">
+                      Program
+                    </th>
+                    {DEPARTMENTS.map((dept) => (
+                      <th key={dept} className="text-center font-medium text-muted-foreground p-2 border-b border-border min-w-[50px]">
+                        {dept}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {PROGRAMS.map((program) => (
+                    <tr key={program} className="border-b border-border/50 hover:bg-muted/30">
+                      <td className="font-medium p-2 sticky left-0 bg-card">
+                        {program}
+                      </td>
+                      {DEPARTMENTS.map((dept) => {
+                        const eligible = getEligibility(eligibilityMap, program, dept);
+                        return (
+                          <td key={`${program}-${dept}`} className="text-center p-2">
+                            <div className="flex justify-center">
+                              <EligibilityIcon eligible={eligible} />
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
