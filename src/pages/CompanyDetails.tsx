@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Check, X, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CompanyProforma } from "@/types/placement";
 import { idToBranch } from "@/lib/branchMapping";
+import { getProformaData } from "@/lib/dataCache";
 
 function RenderHtml({ html }: { html: string }) {
   if (!html || html === "<p><br></p>") return <span className="text-muted-foreground">-</span>;
   return <div dangerouslySetInnerHTML={{ __html: html }} className="prose prose-sm max-w-none dark:prose-invert" />;
 }
 
-// Define programs and departments for the eligibility matrix
 const PROGRAMS = ["BT", "BS", "DoubleMajor", "DualA", "DualB", "DualC", "MT", "MS", "MSR", "MSc", "MDes", "MBA", "PhD"];
 const DEPARTMENTS = [
   "AE", "BSBE", "CE", "CHE", "CSE", "EE", "MSE", "ME", "CHM", "ECO", "ES", "MTH",
@@ -19,11 +19,8 @@ const DEPARTMENTS = [
   "Mathematics", "SEE", "SSA"
 ];
 
-// Build a lookup map from idToBranch
 function buildEligibilityMap(eligibilityStr: string): Map<string, boolean | null> {
   const map = new Map<string, boolean | null>();
-  
-  // Get all branch IDs sorted
   const sortedIds = Object.keys(idToBranch)
     .map(Number)
     .filter(id => id !== 200)
@@ -36,30 +33,24 @@ function buildEligibilityMap(eligibilityStr: string): Map<string, boolean | null
       map.set(branch, char === "1" ? true : char === "0" ? false : null);
     }
   });
-  
   return map;
 }
 
 function getEligibility(eligibilityMap: Map<string, boolean | null>, program: string, dept: string): boolean | null {
   const key = `${program}-${dept}`;
-  if (eligibilityMap.has(key)) {
-    return eligibilityMap.get(key)!;
-  }
-  return null; // NA
+  return eligibilityMap.has(key) ? eligibilityMap.get(key)! : null;
 }
 
 function EligibilityIcon({ eligible }: { eligible: boolean | null }) {
-  if (eligible === true) {
-    return <Check className="h-4 w-4 text-green-500" />;
-  } else if (eligible === false) {
-    return <X className="h-4 w-4 text-red-500" />;
-  }
+  if (eligible === true) return <Check className="h-4 w-4 text-green-500" />;
+  if (eligible === false) return <X className="h-4 w-4 text-red-500" />;
   return <Minus className="h-4 w-4 text-muted-foreground" />;
 }
 
 export default function CompanyDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [company, setCompany] = useState<CompanyProforma | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,10 +58,7 @@ export default function CompanyDetails() {
   useEffect(() => {
     const loadCompanyData = async () => {
       try {
-        const response = await fetch("/data/linked_company_details.json");
-        if (!response.ok) throw new Error("Failed to load company data");
-        const data: CompanyProforma[] = await response.json();
-        
+        const data = await getProformaData();
         const found = data.find((c) => c.ID.toString() === id);
         if (!found) {
           setError("Company not found");
@@ -83,9 +71,14 @@ export default function CompanyDetails() {
         setLoading(false);
       }
     };
-
     loadCompanyData();
   }, [id]);
+
+  const handleBack = () => {
+    const params = new URLSearchParams(searchParams);
+    params.set("tab", "proforma");
+    navigate(`/?${params.toString()}`);
+  };
 
   if (loading) {
     return (
@@ -99,9 +92,9 @@ export default function CompanyDetails() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
         <div className="text-destructive text-lg">{error || "Company not found"}</div>
-        <Button variant="outline" onClick={() => navigate("/")}>
+        <Button variant="outline" onClick={handleBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Home
+          Back to Proforma
         </Button>
       </div>
     );
@@ -117,30 +110,16 @@ export default function CompanyDetails() {
     );
   };
 
-  const HtmlDetailRow = ({ label, value }: { label: string; value: string | undefined }) => {
-    if (!value || value.trim() === "" || value === "<p><br></p>") return null;
-    return (
-      <div className="py-3">
-        <dt className="text-sm font-medium text-muted-foreground mb-2">{label}</dt>
-        <dd className="text-foreground bg-muted/50 rounded-lg p-3">
-          <RenderHtml html={value} />
-        </dd>
-      </div>
-    );
-  };
-
   const eligibilityMap = buildEligibilityMap(company.eligibility || "");
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Back Button */}
-        <Button variant="ghost" onClick={() => navigate("/")} className="mb-6">
+        <Button variant="ghost" onClick={handleBack} className="mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Proforma
         </Button>
 
-        {/* Header */}
         <Card className="mb-6">
           <CardHeader>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -157,9 +136,7 @@ export default function CompanyDetails() {
           </CardHeader>
         </Card>
 
-        {/* Two Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Left Column - Basic Info */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Basic Information</CardTitle>
@@ -173,7 +150,6 @@ export default function CompanyDetails() {
             </CardContent>
           </Card>
 
-          {/* Right Column - Compensation */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Compensation</CardTitle>
@@ -193,7 +169,6 @@ export default function CompanyDetails() {
           </Card>
         </div>
 
-        {/* Full Width - Package & CTC Details */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {company.package_details && company.package_details !== "<p><br></p>" && (
             <Card>
@@ -218,7 +193,6 @@ export default function CompanyDetails() {
           )}
         </div>
 
-        {/* Job Description - Full Width */}
         {company.job_description && company.job_description !== "<p><br></p>" && (
           <Card className="mb-6">
             <CardHeader>
@@ -230,7 +204,6 @@ export default function CompanyDetails() {
           </Card>
         )}
 
-        {/* Eligibility Matrix - Full Width */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="text-lg">Eligibility</CardTitle>
