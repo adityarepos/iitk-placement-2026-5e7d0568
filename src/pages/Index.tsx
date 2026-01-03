@@ -161,39 +161,25 @@ const Index = () => {
           {/* Tabs + Search Row */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <TabsList className="grid w-full max-w-[200px] grid-cols-2">
-              <TabsTrigger value="stats" className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
+              <TabsTrigger value="stats" className="flex items-center gap-1.5">
+                <BarChart3 className="h-3.5 w-3.5" />
                 Stats
               </TabsTrigger>
-              <TabsTrigger value="proforma" className="flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
+              <TabsTrigger value="proforma" className="flex items-center gap-1.5">
+                <Building2 className="h-3.5 w-3.5" />
                 Proforma
               </TabsTrigger>
             </TabsList>
 
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-9 w-64"
-                />
-              </div>
-              <Select value={pageSize} onValueChange={handlePageSizeChange}>
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                  <SelectItem value="all">All</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-9 w-64"
+              />
             </div>
           </div>
 
@@ -270,38 +256,52 @@ const Index = () => {
             <div className="text-sm text-muted-foreground">
               Showing {startIdx + 1} to {Math.min(endIdx, currentData.length)} of {currentData.length} entries
             </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(validPage - 1)}
-                disabled={validPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              {getPageNumbers().map((page, idx) => 
-                page === "..." ? (
-                  <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">...</span>
-                ) : (
-                  <Button
-                    key={page}
-                    variant={page === validPage ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handlePageChange(page as number)}
-                    className="min-w-[36px]"
-                  >
-                    {page}
-                  </Button>
-                )
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(validPage + 1)}
-                disabled={validPage === totalPages}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+            <div className="flex items-center gap-3">
+              <Select value={pageSize} onValueChange={handlePageSizeChange}>
+                <SelectTrigger className="w-20 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(validPage - 1)}
+                  disabled={validPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {getPageNumbers().map((page, idx) => 
+                  page === "..." ? (
+                    <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">...</span>
+                  ) : (
+                    <Button
+                      key={page}
+                      variant={page === validPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(page as number)}
+                      className="min-w-[36px]"
+                    >
+                      {page}
+                    </Button>
+                  )
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(validPage + 1)}
+                  disabled={validPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </Tabs>
