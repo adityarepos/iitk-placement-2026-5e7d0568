@@ -10,6 +10,7 @@ import { getBranchName } from "@/lib/branchMapping";
 import type { CompanyProforma, StudentPlacement } from "@/types/placement";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { StudentHoverCard } from "@/components/StudentHoverCard";
 
 // Preload data on module load
 preloadData();
@@ -204,7 +205,11 @@ const Index = () => {
                   <tbody>
                     {(paginatedData as StudentPlacement[]).map((student, idx) => (
                       <tr key={`${student.roll_no}-${idx}`} className="border-b border-border hover:bg-accent/30">
-                        <td className="px-4 py-3 text-card-foreground">{student.name}</td>
+                        <td className="px-4 py-3 text-card-foreground">
+                          <StudentHoverCard rollNo={student.roll_no} name={student.name}>
+                            {student.name}
+                          </StudentHoverCard>
+                        </td>
                         <td className="px-4 py-3 text-card-foreground">{student.roll_no}</td>
                         <td className="px-4 py-3 text-card-foreground">{student.company_name}</td>
                         <td className="px-4 py-3 text-card-foreground">{student.profile}</td>
