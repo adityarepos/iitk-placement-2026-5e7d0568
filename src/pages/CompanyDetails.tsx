@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CompanyProforma, TimelineEvent } from "@/types/placement";
 import { idToBranch } from "@/lib/branchMapping";
-import { getProformaData, getTimelineData } from "@/lib/dataCache";
+import { getProformaData, getTimelineForCompany } from "@/lib/dataCache";
 
 function RenderHtml({ html }: { html: string }) {
   if (!html || html === "<p><br></p>") return <span className="text-muted-foreground">-</span>;
@@ -59,26 +59,15 @@ export default function CompanyDetails() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [proformaData, timeline] = await Promise.all([
-          getProformaData(),
-          getTimelineData()
-        ]);
+        const proformaData = await getProformaData();
         const found = proformaData.find((c) => c.ID.toString() === id);
         if (!found) {
           setError("Company not found");
         } else {
           setCompany(found);
-          // Filter timeline events for this company
-          const companyName = found.company_name?.toLowerCase() || "";
-          const relevantEvents = timeline.filter((event) => {
-            const title = event.title?.toLowerCase() || "";
-            const description = event.description?.toLowerCase() || "";
-            const tags = event.tags?.toLowerCase() || "";
-            return title.includes(companyName) || description.includes(companyName) || tags.includes(companyName);
-          });
-          // Sort by CreatedAt descending (most recent first)
-          relevantEvents.sort((a, b) => new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime());
-          setTimelineEvents(relevantEvents);
+          // Get pre-indexed timeline events (already sorted)
+          const events = await getTimelineForCompany(found.company_name || "");
+          setTimelineEvents(events);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load data");
