@@ -1,18 +1,22 @@
 // Global data cache for performance optimization
-import type { CompanyProforma, StatsData } from "@/types/placement";
+import type { CompanyProforma, StatsData, TimelineEvent } from "@/types/placement";
 
 interface DataCache {
   stats: StatsData | null;
   proforma: CompanyProforma[] | null;
+  timeline: TimelineEvent[] | null;
   statsLoaded: boolean;
   proformaLoaded: boolean;
+  timelineLoaded: boolean;
 }
 
 const cache: DataCache = {
   stats: null,
   proforma: null,
+  timeline: null,
   statsLoaded: false,
   proformaLoaded: false,
+  timelineLoaded: false,
 };
 
 export async function getStatsData(): Promise<StatsData> {
@@ -39,8 +43,21 @@ export async function getProformaData(): Promise<CompanyProforma[]> {
   return cache.proforma!;
 }
 
-// Preload both data sets
+export async function getTimelineData(): Promise<TimelineEvent[]> {
+  if (cache.timelineLoaded && cache.timeline) {
+    return cache.timeline;
+  }
+  
+  const response = await fetch("/data/timeline.json");
+  if (!response.ok) throw new Error("Failed to load timeline data");
+  cache.timeline = await response.json();
+  cache.timelineLoaded = true;
+  return cache.timeline!;
+}
+
+// Preload all data sets
 export function preloadData() {
   getStatsData().catch(console.error);
   getProformaData().catch(console.error);
+  getTimelineData().catch(console.error);
 }
