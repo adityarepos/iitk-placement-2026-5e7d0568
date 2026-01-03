@@ -1,11 +1,12 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Check, X, Minus, Calendar, Clock } from "lucide-react";
+import { ArrowLeft, Check, X, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { CompanyProforma, TimelineEvent } from "@/types/placement";
+import type { CompanyProforma } from "@/types/placement";
 import { idToBranch } from "@/lib/branchMapping";
-import { getProformaData, getTimelineForCompany } from "@/lib/dataCache";
+import { getProformaData } from "@/lib/dataCache";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 function RenderHtml({ html }: { html: string }) {
   if (!html || html === "<p><br></p>") return <span className="text-muted-foreground">-</span>;
@@ -52,7 +53,6 @@ export default function CompanyDetails() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [company, setCompany] = useState<CompanyProforma | null>(null);
-  const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,9 +65,6 @@ export default function CompanyDetails() {
           setError("Company not found");
         } else {
           setCompany(found);
-          // Get pre-indexed timeline events (already sorted)
-          const events = await getTimelineForCompany(found.company_name || "");
-          setTimelineEvents(events);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load data");
@@ -119,10 +116,13 @@ export default function CompanyDetails() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <Button variant="ghost" onClick={handleBack} className="mb-6">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Proforma
-        </Button>
+        <div className="flex items-center justify-between mb-6">
+          <Button variant="ghost" onClick={handleBack}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Proforma
+          </Button>
+          <ThemeToggle />
+        </div>
 
         <Card className="mb-6">
           <CardHeader>
@@ -248,58 +248,6 @@ export default function CompanyDetails() {
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Timeline / Notices Section */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Notices & Updates
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {timelineEvents.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No updates found for this company.</p>
-            ) : (
-              <div className="space-y-4">
-                {timelineEvents.map((event) => (
-                  <div key={event.ID} className="border-l-2 border-primary/30 pl-4 py-2">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                      <Calendar className="h-3 w-3" />
-                      <span>{new Date(event.CreatedAt).toLocaleDateString('en-IN', { 
-                        day: 'numeric', 
-                        month: 'short', 
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}</span>
-                      {event.deadline > 0 && (
-                        <span className="text-destructive">
-                          • Deadline: {new Date(event.deadline).toLocaleDateString('en-IN', { 
-                            day: 'numeric', 
-                            month: 'short', 
-                            year: 'numeric'
-                          })}
-                        </span>
-                      )}
-                    </div>
-                    <h4 className="font-medium text-foreground text-sm">{event.title}</h4>
-                    <p className="text-muted-foreground text-sm mt-1">{event.description}</p>
-                    {event.tags && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {event.tags.split(',').map((tag, idx) => (
-                          <span key={idx} className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded">
-                            {tag.trim()}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
