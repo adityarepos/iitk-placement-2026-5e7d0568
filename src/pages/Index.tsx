@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart3, Building2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { getStatsData, getProformaData, preloadData } from "@/lib/dataCache";
 import { getBranchName } from "@/lib/branchMapping";
 import type { CompanyProforma, StudentPlacement } from "@/types/placement";
@@ -171,15 +172,18 @@ const Index = () => {
               </TabsTrigger>
             </TabsList>
 
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="pl-9 w-64"
-              />
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="pl-9 w-64"
+                />
+              </div>
+              <ThemeToggle />
             </div>
           </div>
 
